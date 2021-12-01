@@ -7,5 +7,5 @@ Ce package regroupe un ensemble de fonctions pour la mise en qualité de la base
 
 Pour le moment il est focalisé sur les mesures individuelles (biométrie réalisée sur les poissons), en particulier :
 
-- Distributions en taille (longueur), avec les fonctions préfixées par `qta_`
--Relations taille - poids avec les fonctions préfixées par `qtp_`
+- Distributions en taille (longueur), avec les fonctions préfixées par `qta_`  
+- Relations taille - poids avec les fonctions préfixées par `qtp_`
