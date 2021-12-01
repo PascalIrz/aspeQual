@@ -3,7 +3,7 @@
 #' S'applique typiquement pour comparer les distributions des longueurs entre individus
 #'     mesurés ert "dégroupés".
 #'
-#' @param data Dataframe de données avec une variable "lop_id" et le nom de la variable choisie
+#' @param df Dataframe de données avec une variable "lop_id" et le nom de la variable choisie
 #'     à représenter.
 #' @param id_lot Entier. Numéro du lot.
 #' @param variable Caractère. Nom de la variable à représenter, entre guillemets.
@@ -14,16 +14,16 @@
 #' @importFrom dplyr filter group_by summarise slice select pull
 #' @importFrom grid grid.text gpar
 #' @importFrom ggplot2 ggplot aes geom_density geom_vline labs theme scale_fill_brewer
-#' @importFrom ggplot2 scale_color_brewer annotation_custom
+#' @importFrom ggplot2 scale_color_brewer annotation_custom element_text element_blank
 #'
 #' @examples
 #' \dontrun{
-#' qta_densite_comp_distri_lot (data = df, id_lot = 3156360, variable = "mei_taille")
+#' qta_densite_comp_distri_lot (df = df, id_lot = 3156360, variable = "mei_taille")
 #' }
-qta_densite_comp_distri_lot <- function(data, id_lot, variable)
+qta_densite_comp_distri_lot <- function(df, id_lot, variable)
 
 {
-  lot_data <- data %>%
+  lot_data <- df %>%
     filter(lop_id == id_lot)
 
   mes_stats <- lot_data %>%
@@ -37,7 +37,7 @@ qta_densite_comp_distri_lot <- function(data, id_lot, variable)
     paste(collapse = " - ")
 
   titre <- paste0(
-    "Lot n°",
+    "Lot ",
     lot_data %>%
       slice(1) %>%
       select(lop_id, esp_nom_commun) %>%
