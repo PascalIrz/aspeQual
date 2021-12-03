@@ -9,17 +9,17 @@
 #' @return Le graphique ggplot assemblé
 #' @export
 #'
-#' @importFrom ggpubr ggarrange text_grob
+#' @importFrom ggpubr ggarrange text_grob annotate_figure
 #'
 #' @examples
 #' \dontrun{
 #' # Avec 12 graphiques à assembler
-#' qta_densite_comp_distri_lot_grille(liste_graphiques = graphiques, ncol = 3, nrow = 4)
+#' qta_gg_densite_comp_distri_lot_grille(liste_graphiques = graphiques, ncol = 3, nrow = 4)
 #' }
-qta_densite_comp_distri_lot_grille <- function(liste_graphiques, ncol, nrow)
+qta_gg_densite_comp_distri_lot_grille <- function(liste_graphiques, ncol, nrow)
 
 {
-  fig <- ggpubr::ggarrange(
+  fig <- ggarrange(
     plotlist = liste_graphiques,
     ncol = ncol,
     nrow = nrow,
@@ -27,7 +27,7 @@ qta_densite_comp_distri_lot_grille <- function(liste_graphiques, ncol, nrow)
     legend = "top"
   )
 
-  ggpubr::annotate_figure(
+  annotate_figure(
     fig,
     bottom = ggpubr::text_grob("Longueur (mm)"),
     left = ggpubr::text_grob("Densit\u00e9", rot = 90)

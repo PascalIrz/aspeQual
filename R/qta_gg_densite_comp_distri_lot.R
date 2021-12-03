@@ -5,7 +5,7 @@
 #'
 #' @param df Dataframe de données avec une variable "lop_id" et le nom de la variable choisie
 #'     à représenter.
-#' @param id_lot Entier. Numéro du lot.
+#' @param lop_id Entier. Numéro du lot.
 #' @param variable Caractère. Nom de la variable à représenter, entre guillemets.
 #'
 #' @return Le graphique ggplot pour ce lot et cette variable
@@ -18,13 +18,13 @@
 #'
 #' @examples
 #' \dontrun{
-#' qta_densite_comp_distri_lot (df = df, id_lot = 3156360, variable = "mei_taille")
+#' qta_gg_densite_comp_distri_lot (df = df, lop_id = 3156360, variable = "mei_taille")
 #' }
-qta_densite_comp_distri_lot <- function(df, id_lot, variable)
+qta_gg_densite_comp_distri_lot <- function(df, lop_id, variable)
 
 {
   lot_data <- df %>%
-    filter(lop_id == id_lot)
+    filter(lop_id == lop_id)
 
   mes_stats <- lot_data %>%
     group_by(mei_mesure_reelle) %>%

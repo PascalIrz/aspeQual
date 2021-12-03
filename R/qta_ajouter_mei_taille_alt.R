@@ -20,6 +20,7 @@ qta_ajouter_mei_taille_alt <- function(df)
 
 {
   mes_lots <- df %>%
+    filter(tyl_libelle == "S/L") %>%
     pull(lop_id) %>%
     unique()
 
