@@ -4,13 +4,13 @@
 \alias{qta_gg_densite_comp_distri_lot}
 \title{Grapher le density plot de deux sous-lots}
 \usage{
-qta_gg_densite_comp_distri_lot(df, lop_id, variable)
+qta_gg_densite_comp_distri_lot(df, lot, variable)
 }
 \arguments{
 \item{df}{Dataframe de données avec une variable "lop_id" et le nom de la variable choisie
 à représenter.}
 
-\item{lop_id}{Entier. Numéro du lot.}
+\item{lot}{Entier. Numéro du lot.}
 
 \item{variable}{Caractère. Nom de la variable à représenter, entre guillemets.}
 }
@@ -23,6 +23,6 @@ S'applique typiquement pour comparer les distributions des longueurs entre indiv
 }
 \examples{
 \dontrun{
-qta_gg_densite_comp_distri_lot (df = df, lop_id = 3156360, variable = "mei_taille")
+qta_gg_densite_comp_distri_lot (df = df, lot = 3156360, variable = "mei_taille")
 }
 }

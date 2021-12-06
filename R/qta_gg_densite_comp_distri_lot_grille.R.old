@@ -16,7 +16,9 @@
 #' # Avec 12 graphiques à assembler
 #' qta_gg_densite_comp_distri_lot_grille(liste_graphiques = graphiques, ncol = 3, nrow = 4)
 #' }
-qta_gg_densite_comp_distri_lot_grille <- function(liste_graphiques, ncol, nrow)
+qta_gg_densite_comp_distri_lot_grille <- function(liste_graphiques,
+                                                  ncol,
+                                                  nrow)
 
 {
   fig <- ggarrange(
