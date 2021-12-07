@@ -15,6 +15,7 @@
 #' @importFrom ggplot2 ggplot aes geom_histogram facet_wrap geom_vline theme element_text
 #' @importFrom ggplot2 element_blank labs geom_line scale_x_continuous coord_flip
 #' @importFrom ggpubr ggarrange
+#' @importFrom stats median
 #'
 #' @examples
 #' \dontrun{
@@ -66,7 +67,7 @@ qta_gg_dyn_esp_pop <- function(df, point, espece)
     geom_line(aes(y = mediane),
               col = "red") +
     labs(x = "",
-         y = "Longueur médiane (mm)") +
+         y = "Long. med.") +
     scale_x_continuous(limits = gamme_annee) +
     theme(axis.text.y = element_text(angle = 90,
                                      hjust = 0.5),
