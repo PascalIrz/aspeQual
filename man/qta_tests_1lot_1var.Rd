@@ -4,13 +4,13 @@
 \alias{qta_tests_1lot_1var}
 \title{Tester sur un lot et une variable si les distributions diffèrent}
 \usage{
-qta_tests_1lot_1var(df, lop_id, variable)
+qta_tests_1lot_1var(df, lot, variable)
 }
 \arguments{
 \item{df}{Dataframe de données avec une variable "lop_id" et le nom de la variable choisie
 à représenter.}
 
-\item{lop_id}{Entier. Numéro du lot.}
+\item{lot}{Entier. Numéro du lot.}
 
 \item{variable}{Caractère. Nom de la variable à représenter, entre guillemets.}
 }
@@ -23,6 +23,6 @@ Les tests sont Kolmogorov-Smirnov (comparaison des distributions), Student (comp
 }
 \examples{
 \dontrun{
-tests <- qta_tests_1lot_1var(df = df, lop_id = 3156360, variable = "mei_taille")
+tests <- qta_tests_1lot_1var(df = df, lot = 3156360, variable = "mei_taille")
 }
 }

@@ -26,7 +26,8 @@ qta_ajouter_mei_taille_alt <- function(df)
 
   # fonction qui ajoute au df d'un lot la colonne mei_taille_alt qui, quand mei_mesure_reelle == "f",
   # tire aléatoirement une valeur parmi les mei_mesure_reelle == "t" du même lot.
-  ajouter_mei_taille_alt_1_lot <- function(df, id_lot) {
+  ajouter_mei_taille_alt_1_lot <- function(df, id_lot)
+    {
     data_1lot <- df %>%
       filter(lop_id == id_lot)
 
