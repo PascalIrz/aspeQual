@@ -36,8 +36,8 @@ qta_gg_dyn_esp_pop <- function(df, point, espece)
     summarise(mediane = median(mei_taille),
               effectif = n())
 
-  gamme_annee <- c(min_annee = min(stats$annee),
-                   max_annee = max(stats$annee))
+  # gamme_annee <- c(min_annee = min(stats$annee),
+  #                  max_annee = max(stats$annee))
 
   g1 <- ggplot(data = data_pop,
                aes(x = mei_taille)) +
@@ -53,7 +53,7 @@ qta_gg_dyn_esp_pop <- function(df, point, espece)
           plot.title = element_text(size = 10),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
-          strip.text.y = element_text(size = 6)) +
+          strip.text.y = element_text(size = 7)) +
     labs(x = "Longueur(mm)",
          y = "Effectif",
          title = paste(mon_espece,
@@ -62,13 +62,13 @@ qta_gg_dyn_esp_pop <- function(df, point, espece)
 
 
   g2 <- ggplot(data = stats,
-               aes(x = annee),
-               boundary = 0) +
-    geom_line(aes(y = mediane),
-              col = "red") +
+               aes(x = annee)) +
+    geom_bar(aes(y = mediane),
+              fill = "red",
+              stat = "identity") +
     labs(x = "",
          y = "Long. med.") +
-    scale_x_continuous(limits = gamme_annee) +
+    scale_y_continuous(guide = guide_axis(n.dodge = 2)) +
     theme(axis.text.y = element_text(angle = 90,
                                      hjust = 0.5),
           axis.title = element_text(size = 10)) +
@@ -77,13 +77,15 @@ qta_gg_dyn_esp_pop <- function(df, point, espece)
 
   g3 <- ggplot(data = stats,
                aes(x = annee)) +
-    geom_line(aes(y = effectif),
-              col = "blue") +
+    geom_bar(aes(y = effectif),
+              fill = "blue",
+              stat = "identity") +
     labs(x = "",
          y = "Effectif") +
-    scale_x_continuous(limits = gamme_annee) +
+    scale_y_continuous(guide = guide_axis(n.dodge = 2)) +
     theme(axis.text.y = element_text(angle = 90,
                                      hjust = 0.5),
+ #         axis.text.x = element_blank(),
           axis.title = element_text(size = 10)) +
     coord_flip()
 

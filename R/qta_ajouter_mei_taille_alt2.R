@@ -1,0 +1,44 @@
+#' Ajouter à un df une colonne de longueur par dégroupage des lots
+#'
+#' Il s'agit d'une méthode alternative à celle utilisée par la base Aspe. Elle affecte à
+#'     chaque individu d'un lot "S/L" qui n'a pas été mesuré une longueur tirée aléatoirement
+#'     parmi celles des individus du sous-lot qui a été mesuré.
+#'
+#' @param df Dataframe de données avec des variables "lop_id", "mei_mesure_reelle" et "mei_taille".
+#'
+#' @return Le dataframe complété.
+#' @export
+#'
+#' @importFrom dplyr pull filter mutate
+#' @importFrom purrr map reduce
+#'
+#' @examples
+#' \dontrun{
+#' data <- data %>% qta_ajouter_mei_taille_alt2()
+#' }
+qta_ajouter_mei_taille_alt2 <- function(df)
+
+{
+
+  replace_func <- function(x)
+
+    {
+
+    inds <- is.na(x)
+
+    x[inds] <- sample(x[!inds],
+                      size = sum(inds),
+                      replace = TRUE)
+    x
+
+   }
+
+  df %>%
+    mutate(mei_taille_alt = ifelse(test = mei_mesure_reelle == 't',
+                                   yes = mei_taille,
+                                   no = NA)) %>%
+    group_by(lop_id) %>%
+    mutate(mei_taille_alt = replace_func(mei_taille_alt))
+
+}
+
