@@ -16,7 +16,9 @@ Imports: dplyr,
     grid,
     magrittr,
     purrr,
-    stringr
+    stringr,
+    tidyr,
+    tidyselect
 Suggests: 
     knitr,
     rmarkdown

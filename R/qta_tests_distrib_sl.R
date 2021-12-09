@@ -16,7 +16,8 @@
 #' @return Un dataframe avec une ligne par lot, contenant les résultats des tests.
 #' @export
 #'
-#' @importFrom dplyr filter pull
+#' @importFrom dplyr filter pull case_when
+#' @importFrom tidyselect last_col
 #' @importFrom stats ks.test t.test var.test
 #'
 #' @examples
