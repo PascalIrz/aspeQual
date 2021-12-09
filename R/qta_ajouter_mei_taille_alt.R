@@ -4,13 +4,14 @@
 #'     chaque individu d'un lot "S/L" qui n'a pas été mesuré une longueur tirée aléatoirement
 #'     parmi celles des individus du sous-lot qui a été mesuré.
 #'
-#' @param df Dataframe de données avec des variables "lop_id", "mei_mesure_reelle" et "mei_taille".
+#' @param df Dataframe de données avec des variables "lop_id", "mei_mesure_reelle", "mei_id",
+#'     "tyl_libelle" et "mei_taille".
 #'
 #' @return Le dataframe complété.
 #' @export
 #'
-#' @importFrom dplyr pull filter mutate
-#' @importFrom purrr map reduce
+#' @importFrom dplyr group_by mutate ungroup filter tally left_join
+#' @importFrom tidyr pivot_wider
 #'
 #' @examples
 #' \dontrun{
@@ -19,39 +20,49 @@
 qta_ajouter_mei_taille_alt <- function(df)
 
 {
-  mes_lots <- df %>%
-    filter(tyl_libelle == "S/L") %>%
-    pull(lop_id) %>%
-    unique()
+  # Fonction qui complète, dans un vecteur, les NA par tirage aléatoire parmi les non-NA
+  replace_func <- function(vecteur)
 
-  # fonction qui ajoute au df d'un lot la colonne mei_taille_alt qui, quand mei_mesure_reelle == "f",
-  # tire aléatoirement une valeur parmi les mei_mesure_reelle == "t" du même lot.
-  ajouter_mei_taille_alt_1_lot <- function(df, id_lot)
-    {
-    data_1lot <- df %>%
-      filter(lop_id == id_lot)
+  {
 
-    data_1lot_t <- data_1lot %>%
-      filter(mei_mesure_reelle == "t") %>%
-      mutate(mei_taille_alt = mei_taille)
+    indices_manquants <- is.na(vecteur)
 
-    data_1lot_f <- data_1lot %>%
-      filter(mei_mesure_reelle == "f")
-
-    data_1lot_f$mei_taille_alt <- sample(
-      x = data_1lot_t$mei_taille,
-      size = nrow(data_1lot_f),
-      replace = TRUE
-    )
-
-    data_1lot_ta <- rbind(data_1lot_t, data_1lot_f)
-
-    data_1lot_ta
+    vecteur[indices_manquants] <-
+      sample(vecteur[!indices_manquants],
+             size = sum(indices_manquants),
+             replace = TRUE)
+    vecteur
 
   }
-  # application sur l'ensemble des lots du df
-  map(.x = mes_lots,
-      .f = ajouter_mei_taille_alt_1_lot,
-      df = df) %>%
-    reduce(rbind)
+
+  # comptage des mesures réelles ou non
+  comptage <- df %>%
+    filter(tyl_libelle == "S/L") %>%
+    group_by(lop_id,
+             mei_mesure_reelle) %>%
+    tally() %>%
+    ungroup() %>%
+    pivot_wider(names_from = mei_mesure_reelle,
+                values_from = n)
+
+  # calcul des longueurs par tirage aléatoire (slt surles lots avec des mesurés et non mesurés)
+  mei_taille_alt <- df %>%
+    left_join(comptage) %>%
+    filter(t > 0, f > 0) %>% # sélection des lots avec des mesurés et non mesurés
+    select(-t,-f) %>%
+    mutate(mei_taille_alt = ifelse( # report des mesures réelles
+      test = mei_mesure_reelle == 't',
+      yes = mei_taille,
+      no = NA
+    )) %>%
+    group_by(lop_id) %>% # par lot
+    mutate(mei_taille_alt = replace_func(mei_taille_alt)) %>% # ajout mei_taille_alt par ta
+    ungroup() %>%
+    select(mei_id,
+           mei_taille_alt)
+
+  # ajout des mei_taille alt au df de départ
+  df %>%
+    left_join(mei_taille_alt)
+
 }

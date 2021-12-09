@@ -7,7 +7,8 @@
 qta_ajouter_mei_taille_alt(df)
 }
 \arguments{
-\item{df}{Dataframe de données avec des variables "lop_id", "mei_mesure_reelle" et "mei_taille".}
+\item{df}{Dataframe de données avec des variables "lop_id", "mei_mesure_reelle", "mei_id",
+"tyl_libelle" et "mei_taille".}
 }
 \value{
 Le dataframe complété.
