@@ -31,6 +31,58 @@ qta_tests_distrib_sl <-
            sig = TRUE)
 
   {
+
+    #----------------------------------------------------------------------------
+
+    qta_tests_1lot_1var <- function(df, lot, variable)
+
+    {
+
+      lot_data <- df %>%
+        filter(lop_id == lot)
+
+      t <- lot_data %>%
+        filter(mei_mesure_reelle == "t") %>%
+        pull(get(variable))
+
+      f <- lot_data %>%
+        filter(mei_mesure_reelle == "f") %>%
+        pull(get(variable))
+
+      ks <- ks.test(t, f) %>%
+        .$p.value
+
+      student <- t.test(t, f) %>%
+        .$p.value
+
+      variance <- var.test(t, f) %>%
+        .$p.value
+
+      eff_mesure <- lot_data %>%
+        filter(mei_mesure_reelle == "t") %>%
+        nrow()
+
+      eff_non_mesure <- nrow(lot_data) - eff_mesure
+
+      lot <- lot
+
+      station = lot_data$pop_libelle[1]
+
+      espece = lot_data$esp_nom_commun[1]
+
+      data.frame(lot,
+                 station,
+                 espece,
+                 eff_mesure,
+                 eff_non_mesure,
+                 ks,
+                 student,
+                 variance)
+
+    }
+
+    # -----------------------------------------------------------------------------
+
     # identifiants des lots. Si non précisé ils sont tous conservés
     if (is.na(lots))
     {
@@ -40,7 +92,7 @@ qta_tests_distrib_sl <-
     }
 
     # tests sur les données de la variable var_taille1 (eg dégroupées par Aspe)
-    degroupage_var1 <- map(
+    resultat <- map(
       .x = lots,
       .f = qta_tests_1lot_1var,
       df = df,
@@ -48,8 +100,10 @@ qta_tests_distrib_sl <-
     ) %>%
       reduce(rbind)
 
+  if(!is.na(var_taille2))
+  {
     # tests sur les données par le dégroupage alternatif
-    degroupage_var2 <- map(
+    resultat2 <- map(
       .x = lots,
       .f = qta_tests_1lot_1var,
       df = df,
@@ -58,19 +112,20 @@ qta_tests_distrib_sl <-
       reduce(rbind)
 
     # assemblage
-    resultat <- degroupage_var1 %>%
-      cbind(degroupage_var2 %>%
+    resultat <- resultat %>%
+      cbind(resultat2 %>%
               select(
                 var2_ks = ks,
                 var2_student = student,
                 var2_variance = variance
               ))
+  }
 
     if (sig)
     {
       # mise en forme avec des étoiles
       resultat <- resultat %>%
-        mutate_at(vars(ks:var2_variance),
+        mutate_at(vars(ks:last_col()),
                   function(x) {
                     x <- case_when(x < 1e-3 ~ "(***)",
                                    x < 1e-2 ~ "(**)",
