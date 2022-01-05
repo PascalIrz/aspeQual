@@ -28,8 +28,7 @@ qtp_seuils <- function(df,
 
   data_esp <- df %>%
     filter(esp_code_alternatif == code_espece,
-           mei_taille > 0,
-           mei_poids > 0)
+           get(variable) > 0)
 
   # graphique simplifié
   p <- ggplot(data = data_esp, aes(x = get(variable))) +

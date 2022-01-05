@@ -1,7 +1,7 @@
 Package: aspeQual
 Type: Package
-Title: Quality control over the Aspe database
-Version: 0.1.2
+Title: Quality Control over the Aspe Database
+Version: 0.1.3
 Author: Pascal Irz <pascal.irz@ofb.gouv.fr>
 Maintainer: Pascal Irz <pascal.irz@ofb.gouv.fr>
 Description: The package provides a suite of tools for most of the common 
