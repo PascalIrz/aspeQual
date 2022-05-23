@@ -17,7 +17,7 @@ les champs esp_code_alternatif, tlo_id, mon_lop_poids_est et mei_taille.}
 2 = Longueur totale}
 
 \item{df_taille_poids}{Dataframe contenant les paramètres de la relation taille-poids.
-Il doit avoir les champs code_espece a et b.}
+Il doit avoir les champs esp_code_alternatif a et b.}
 }
 \value{
 Un dataframe complété dans le champ mon_lop_poids_est pour l'espèce considérée
