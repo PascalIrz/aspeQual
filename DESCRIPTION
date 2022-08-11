@@ -1,7 +1,7 @@
 Package: aspeQual
 Type: Package
 Title: Quality Control over the Aspe Database
-Version: 0.1.4
+Version: 0.1.5
 Author: Pascal Irz <pascal.irz@ofb.gouv.fr>
 Maintainer: Pascal Irz <pascal.irz@ofb.gouv.fr>
 Description: The package provides a suite of tools for most of the common 
@@ -9,7 +9,7 @@ Description: The package provides a suite of tools for most of the common
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Imports: dplyr,
     ggplot2,
     ggpubr,

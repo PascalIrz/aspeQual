@@ -4,11 +4,24 @@
 \alias{qta_ajouter_mei_taille_alt}
 \title{Ajouter à un df une colonne de longueur par dégroupage des lots}
 \usage{
-qta_ajouter_mei_taille_alt(df)
+qta_ajouter_mei_taille_alt(df, methode = "ta_integral", graine = NULL)
 }
 \arguments{
 \item{df}{Dataframe de données avec des variables "lop_id", "mei_mesure_reelle", "mei_id",
 "tyl_libelle" et "mei_taille".}
+
+\item{methode}{Caractère qui peut prendre les valeurs "ta_integral"ou "ta_partiel".
+Méthode d'attribution des tailles pour les individus non mesurées
+d'un lot S/L. Si methode = "ta_integral", il y a tirage aléatoire intégral avec remise.
+Chaque individu non mesuré se voit attribuer une longueur tirée aléatoirement parmi celles
+des individus mesurés. Si methode = "ta_partiel", soit NM le nombre d'individus mesurés et
+NNM le nombre d'individus non mesurés. Le vecteur des tailles mesurées est reporté
+autant de fois que possible (floor(NNM/NM)), puis les derniers individus se voient attribuer
+une taille par tirage aléatoire sans remise.}
+
+\item{graine}{Nombre entier. Fixe la graine du générateur de nombre aléatoire. Par défaut la graine
+est NULL donc chaque tirage aléatoire est unique. Pour pouvoir répéter le même tirage il faut
+fixer par exemple graine = 123.}
 }
 \value{
 Le dataframe complété.
@@ -16,7 +29,7 @@ Le dataframe complété.
 \description{
 Il s'agit d'une méthode alternative à celle utilisée par la base Aspe. Elle affecte à
     chaque individu d'un lot "S/L" qui n'a pas été mesuré une longueur tirée aléatoirement
-    parmi celles des individus du sous-lot qui a été mesuré.
+    parmi celles des individus du sous-lot qui a été mesuré. Deux méthodes sont proposées.
 }
 \examples{
 \dontrun{
