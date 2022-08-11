@@ -26,7 +26,9 @@
 #'
 #' @examples
 #' \dontrun{
-#' data <- data %>% qta_ajouter_mei_taille_alt()
+#' data <- data %>%
+#'   qta_ajouter_mei_taille_alt(methode = "ta_partiel",
+#'                              graine = 452)
 #' }
 qta_ajouter_mei_taille_alt <- function(df,
                                        methode = "ta_integral",
