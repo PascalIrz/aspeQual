@@ -8,7 +8,9 @@
 #'     choisie(s) à représenter.
 #' @param lots Vecteur entier. Numéros des lots (lop_id).
 #' @param var_taille1 Caractère. Nom de la variable à représenter, entre guillemets.
-#' @param var_taille2 Caractère. Nom de la variable à représenter, entre guillemets (si deux méthodes
+#' @param var_taille2 Caractère. Nom de variable à représenter, entre guillemets (si deux méthodes
+#'     de dégroupage à comparer).
+#' @param var_taille3 Caractère. Nom de variable à représenter, entre guillemets (si trois méthodes
 #'     de dégroupage à comparer).
 #' @param sig Booléen. Si sig = TRUE (défaut), le tableau contient les niveaux de significativité
 #'     des tests. Si sig = FALSE, il contient les p-values.
@@ -22,13 +24,14 @@
 #'
 #' @examples
 #' \dontrun{
-#' tests <- qta_tests_distrib_sl(df = df, lot = 3156360, variable = "mei_taille")
+#' tests <- qta_tests_distrib_sl(df = df, lots = 3156360, var_taille1 = "mei_taille")
 #' }
 qta_tests_distrib_sl <-
   function(df,
            lots = NA,
            var_taille1,
            var_taille2 = NA,
+           var_taille3 = NA,
            sig = TRUE)
 
   {
@@ -101,26 +104,47 @@ qta_tests_distrib_sl <-
     ) %>%
       reduce(rbind)
 
-  if(!is.na(var_taille2))
-  {
-    # tests sur les données par le dégroupage alternatif
-    resultat2 <- map(
-      .x = lots,
-      .f = qta_tests_1lot_1var,
-      df = df,
-      variable = var_taille2
-    ) %>%
-      reduce(rbind)
+    # tests sur les données de la variable var_taille2 (eg dégroupées par Aspe)
+    if(!is.na(var_taille2))
+    {
+      resultat2 <- map(
+        .x = lots,
+        .f = qta_tests_1lot_1var,
+        df = df,
+        variable = var_taille2
+      ) %>%
+        reduce(rbind)
 
-    # assemblage
-    resultat <- resultat %>%
-      cbind(resultat2 %>%
-              select(
-                var2_ks = ks,
-                var2_student = student,
-                var2_variance = variance
-              ))
-  }
+      # assemblage
+      resultat <- resultat %>%
+        cbind(resultat2 %>%
+                select(
+                  var2_ks = ks,
+                  var2_student = student,
+                  var2_variance = variance
+                ))
+    }
+
+    # tests sur les données de la variable var_taille2 (eg dégroupées par Aspe)
+    if(!is.na(var_taille3))
+    {
+      resultat3 <- map(
+        .x = lots,
+        .f = qta_tests_1lot_1var,
+        df = df,
+        variable = var_taille3
+      ) %>%
+        reduce(rbind)
+
+      # assemblage
+      resultat <- resultat %>%
+        cbind(resultat3 %>%
+                select(
+                  var3_ks = ks,
+                  var3_student = student,
+                  var3_variance = variance
+                ))
+    }
 
     if (sig)
     {
