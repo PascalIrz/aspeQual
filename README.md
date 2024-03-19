@@ -3,7 +3,7 @@
 <!-- badges: end -->
 
 
-aspeQual
+aspeQual: an R package for the quality processing of the Aspe database on French river fish sampling 
 ====
 
 Ce package regroupe un ensemble de fonctions pour la mise en qualité de la base Aspe.
