@@ -19,7 +19,7 @@ Le graphique ggplot pour ce lot et cette variable
 }
 \description{
 S'applique typiquement pour comparer les distributions des longueurs entre individus
-    mesurés ert "dégroupés".
+    mesurés et "dégroupés".
 }
 \examples{
 \dontrun{

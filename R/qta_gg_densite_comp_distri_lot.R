@@ -1,7 +1,7 @@
 #' Grapher le density plot de deux sous-lots
 #'
 #' S'applique typiquement pour comparer les distributions des longueurs entre individus
-#'     mesurés ert "dégroupés".
+#'     mesurés et "dégroupés".
 #'
 #' @param df Dataframe de données avec une variable "lop_id" et le nom de la variable choisie
 #'     à représenter.

@@ -4,14 +4,7 @@
 \alias{qta_gg_histo_comp_degroupage}
 \title{Grapher l'histogramme comparé des deux méthodes de dégroupage}
 \usage{
-qta_gg_histo_comp_degroupage(
-  df,
-  ope,
-  espece,
-  x_var = "mei_taille",
-  groupe_var = "degroupage",
-  bins = 20
-)
+qta_gg_histo_comp_degroupage(df, ope, espece, x_var, groupe_var, bins = 20)
 }
 \arguments{
 \item{df}{Dataframe de données avec les variables "ope_id", "esp_nom_commun" issues des tables Aspe
@@ -33,10 +26,10 @@ L'histogramme ggplot de x_var pour cette espèce, lors de cette opération.
 }
 \description{
 S'applique typiquement pour comparer les distributions des longueurs entre individus
-    mesurés ert "dégroupés".
+    mesurés et "dégroupés".
 }
 \examples{
 \dontrun{
-qta_gg_histo_comp_degroupage (df = df, id_lot = 3156360, variable = "mei_taille")
+qta_gg_histo_comp_degroupage (df = df, ope = 6323, x_var = mei_taille, groupe_var = degroupage)
 }
 }

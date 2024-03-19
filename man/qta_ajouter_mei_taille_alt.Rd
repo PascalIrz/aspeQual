@@ -33,6 +33,8 @@ Il s'agit d'une méthode alternative à celle utilisée par la base Aspe. Elle a
 }
 \examples{
 \dontrun{
-data <- data \%>\% qta_ajouter_mei_taille_alt()
+data <- data \%>\%
+  qta_ajouter_mei_taille_alt(methode = "ta_partiel",
+                             graine = 452)
 }
 }

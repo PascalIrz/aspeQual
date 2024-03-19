@@ -1,0 +1,786 @@
+---
+title: "ASPE - Construire des relations taille-poids"
+author: "Pascal Irz"
+date: "`r format(Sys.time(), 'Le %d %B %Y')`"
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    toc_float: true
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+## Objectif
+
+Ce document donne un exemple de chaîne de traitement des données Aspe pour produire des relations taille - poids.
+
+Ces relations se veulent aussi générales que possible, donc d'éventuelles observations atypiques, voire des erreurs dans la base de données, ne doivent pas les influencer exagérément. Une vérification de la crédibilité des résultats est réalisée en les confrontant aux relations taille-poids publiées et diffusées par la base en ligne [Fishbase](www.fishbase.se).
+
+Ces relations peuvent être utiles pour comparer des populations entre elles ainsi que pour estimer la masse des poissons quand on connaît leur longueur, par exemple afin de calculer des densités de biomasse piscicoles en $g$ (de poisson capturé) par $m^2$ prospecté dans les cas - nombreux dans cette base et ailleurs - où toutes les captures ne sont pas pesées sur le terrain.
+
+## Outil
+
+Nous supposons ici que les packages `{aspe}` et `{aspeQual}` ont déjà été installés et que les tables de la base *Aspe* sont disponibles sous forme de `dataframes` sauvegardés au format `.RData` (sinon se reporter au [tuto dédié à ces étapes](https://rpubs.com/kamoke/713407)).
+
+Les fonctions du package `{aspe}` dédiées à ces traitements sont identifiées par le préfixe `qtp_`, pour "Qualité Taille Poids" car l'usage premier de ces fonctions est la mise en qualité de la base en détectant de potentielles erreurs de mesures ou de saisie.
+
+Les fonctions de mise en forme du jeu de données en vue de son traitement sont préfixées par `mef_`.
+
+# Grandes lignes de l'analyse
+
+## Principe
+
+Le point de départ est l'hypothèse classique selon laquelle l'équation qui permet de relier la longueur d'un poisson à son poids est de la forme :
+
+<div align="center">
+
+$Poids=a\cdot Longueur^b$
+
+</div>
+
+Les valeurs des coefficients $a$ et $b$ dépendent des unités qui sont, dans Aspe, les grammes et les millimètres.
+
+Pour déterminer les valeurs des coefficients sur un jeu de données, les deux termes de l'égalité sont log-transformés pour prendre la forme :
+
+<div align="center">
+
+$\log(Poids)=\log(a)+b\cdot log(Longueur)$
+
+</div>
+
+Il suffit d'effectuer la régression linéaire de $\log(Poids)$ en fonction de $log(Longueur)$, de récupérer les coefficients $\alpha=\log(a)$ et $\beta=b$, puis de calculer $a=e^{\alpha}$.
+
+## Contraintes sur le jeu de données
+
+L'analyse reposant sur la régression entre deux grandeurs, il est nécessaires que chacune :
+
+- Soit mesurée avec une précision suffisante
+- Présente une certaine variabilité
+- Soit mesurée sur un nombre suffisant d'individus
+
+Il faut aussi que les distributions des deux variables soient "raisonnablement" proches d'une gaussienne une fois log-transformées en particulier pour éviter que de potentiels *outliers* ne perturbent la relation générale.
+
+## Chargement packages et données
+
+```{r, eval = FALSE}
+library(aspe)
+library(aspeQual)
+library(tidyverse)
+
+load(file = "raw_data/tables_sauf_mei_2021_10_21_11_44_01.RData")
+load(file = "raw_data/mei_2021_10_21_11_44_01.RData")
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(aspe)
+library(aspeQual)
+library(tidyverse)
+
+rdata_tables <- misc_nom_dernier_fichier(repertoire = "../../../../raw_data/rdata",
+                                         pattern = "^tables")
+
+rdata_mei <- misc_nom_dernier_fichier(repertoire = "../../../../raw_data/rdata",
+                                      pattern = "^mei")
+
+load(rdata_tables)
+load(rdata_mei)
+
+rm(data_tables, rdata_mei)
+```
+
+
+## Assemblage du jeu de données
+
+Dans cet exemple, toutes les mesures individuelles de la base sont prises en compte.
+
+>NB : Pour produire des relations taille - poids spécifiques à une région, en théorie il suffit de procéder de même après avoir filtré la table `mesure_individuelle`. En pratique, certaines espèces rares ou de très petite taille (erreurs relatives importantes de mesure du poids) peuvent bloquer la procédure.
+
+Pour constituer le jeu de données, les étapes sont :
+
+- Création d'une table "passerelle" mettant en correspondance les sites, opérations, etc.   
+- Ajout des lots de poissons et de leur type pour ne conserver que les mesures individuelles   
+- Remplacement des codes espèces internes de la base par les codes à trois lettres   
+- Ajout des mesures individuelles pour ne conserver que les mesures réelles et positives de longueur et masse   
+- Sélection des variables à conserver et dédoublonnage   
+
+
+```{r}
+tp_data <- mef_creer_passerelle() %>% # création de la passerelle
+  mef_ajouter_lots() %>% # ajout des lots
+  mef_ajouter_type_lot() %>% # ajout du type de lot
+  filter(tyl_libelle == "N") %>%  # type de lot correspondant aux mesures individuelles
+  mef_ajouter_type_longueur() %>% # ajout du type de longueur
+  mef_ajouter_esp() %>% # ajout des codes et noms espèces
+  mef_ajouter_mei() %>% # ajout mesures individuelles
+  filter(mei_taille > 0 & # taille positive
+         mei_poids > 0 & # poids positifs
+         mei_mesure_reelle == "t") %>% # mesure réelle et non obtenue en "dégroupant" des lots  
+  select(mei_id,
+         lop_id,
+         tlo_libelle,
+         mei_taille,
+         mei_poids,
+         esp_code_alternatif) %>% 
+  distinct() # dédoublonnage
+```
+
+Combien de couples de mesures par espèce, selon que la longueur mesurée est totale ou à la fourche ?
+
+<div align="center">
+
+```{r, class.source = 'fold-hide'}
+obs_par_esp <- tp_data %>% 
+  group_by(esp_code_alternatif,
+           tlo_libelle) %>% 
+    tally() %>%
+  ungroup() %>% 
+  pivot_wider(names_from = tlo_libelle,
+              values_from = n) %>% 
+  purrr::set_names(c("Espèce", "L. fourche", "L. totale", "Estimée d'après le poids")) %>% 
+  arrange(-`L. totale`)
+
+obs_par_esp %>% 
+  DT::datatable(rownames = FALSE, width = 400) %>% 
+  DT::formatCurrency(columns = c("L. fourche", "L. totale", "Estimée d'après le poids"),
+                     currency = "",
+                     interval = 3,
+                     mark = " ",
+                     digits = 0)
+```
+
+</div>
+
+>Dans la suite du document, les longueurs fourche et totale seront traitées séparément.
+
+# Construction relation taille-poids
+
+## Exemple pas à pas
+
+On se propose ici de détailler toutes les étapes de la construction de la relation taille - poids pour **une espèce** en restreignant le jeu de données aux **longueurs totales**.
+
+```{r}
+mon_espece <- "VAN"
+
+esp_lt_data <- tp_data %>%
+  filter(tlo_libelle == "Totale",
+         esp_code_alternatif == mon_espece)
+```
+
+### Gammes de taille et de poids
+
+La première étape, pour éviter que des *outliers* ne perturbent les analyses, est de définir pour chaque espèce des gammes de longueurs et de poids "plausibles" en dehors desquelles les observations seront exclues pour effectuer la régression.
+
+#### Distribution des longueurs
+
+La fonction `qtp_histo()` du package `aspeQual` permet de produire les graphiques de distribution des variables de taille et de poids.
+
+
+
+Production du graphique pour :
+
+```{r}
+qtp_histo(df = esp_lt_data,
+          code_espece = mon_espece,
+          variable = "mei_taille",
+          x_max = 500)
+```
+
+#### Détermination des seuils
+
+Quelle est la gamme de longueurs probables pour la `r mon_espece`, avec une probabilité de 1% ?
+
+Application de la fonction `qtp_seuils()`. Elle retourne un objet contenant deux éléments qui sont les bornes supérieure et inférieure.
+
+```{r}
+seuils <- qtp_seuils2(
+  df = esp_lt_data %>% filter(esp_code_alternatif == mon_espece),
+  var_taxon = esp_code_alternatif,
+  var_a_tester = mei_taille,
+  seuil_densite = 0.01
+)
+
+seuils
+```
+
+Interprétation : Pour les `r mon_espece`, avec une densité de probabilité de 1%, on considérera les individus inférieurs à `r seuils$mini`mm ou supérieurs à `r seuils$maxi`mm avec une attention particulière, voire ils seront considérés comme les *outliers* et éliminés.
+
+Bien sûr ces valeurs dépendent de la densité de probabilité.
+
+```{r, class.source = 'fold-hide'}
+probas <- c(0.1, 0.05, 0.01, 0.001)
+
+map(.x = probas,
+    .f = qtp_seuils,
+    df = esp_lt_data,
+    code_espece = mon_espece,
+    variable = "mei_taille") %>% 
+  reduce(rbind) %>% 
+  as.data.frame() %>% 
+  purrr::set_names(c("mini", "maxi")) %>% 
+  mutate(densite_proba = probas) %>% 
+  select(densite_proba, everything()) %>% 
+  knitr::kable(row.names = F, format = "html", table.attr = "style='width:40%;'")
+```
+
+Pour plus de détail sur la méthode sous-jacente, taper dans la console `get("compute_group", ggplot2::StatDensity)`.
+
+### Relation taille - poids
+
+>Les longueurs dans la base Aspe sont en *mm*, mais les courbes issues de la littérature et synthétisées dans [Fishbase](www.fishbase.se) sont pour des longueurs en *cm.* Afin que les deux soient comparables, nous choisissons ici de convertir les longueurs en *cm*.
+
+```{r}
+esp_lt_data <- esp_lt_data %>% 
+  mutate(mei_taille = mei_taille / 10)
+```
+
+#### Sélection initiale des observations
+
+Pour éviter que les relations taille - poids soient dégradées par des valeurs très peu probables, on les construit sur une gamme de données écartant les valeurs extrêmes.
+
+Détermination des seuils.
+
+```{r}
+seuils_taille <- aspeQual::qtp_seuils2(
+  df = esp_lt_data %>% filter(esp_code_alternatif == mon_espece),
+  var_taxon = esp_code_alternatif,
+  var_a_tester = mei_taille,
+  seuil_densite = 0.01
+)
+
+seuils_poids <- aspeQual::qtp_seuils2(
+  df = esp_lt_data %>% filter(esp_code_alternatif == mon_espece),
+  var_taxon = esp_code_alternatif,
+  var_a_tester = mei_poids,
+  seuil_densite = 0.01
+)
+
+```
+
+Filtrage en utilisant les seuils.
+
+```{r}
+esp_lt_data <- esp_lt_data %>%
+  filter(mei_taille > seuils_taille$mini,
+         mei_taille < seuils_taille$maxi, 
+         mei_poids > seuils_poids$mini,
+         mei_poids < seuils_poids$maxi, 
+         mei_poids >= 5) # en-dessous de 5g la balance est souvent imprécise
+```
+
+#### Modèle préliminaire
+
+On construit un premier modèle en sachant qu'il est potentiellement fortement influencé par quelques observations. Le but est d'identifier de telles observations pour, si nécessaire, les supprimer avant de construire de nouveau un modèle.
+
+La fonction `lm()` du package `{stats}` permet de réaliser une régression du log du poids en fonction du log de la longueur.
+
+```{r}
+mod <- lm(log(mei_poids) ~ log(mei_taille),
+          data = esp_lt_data)
+```
+
+Le modèle `mod` est un objet de classe "lm" (*linear model*). Pour en explorer le contenu, `names(mod)`. Pour en obtenir le résumé :
+
+```{r}
+summary(mod)
+```
+
+Pour obtenir les graphiques de diagnostic :
+
+```{r}
+plot(mod)
+```
+
+Malgré un r² ajusté de 0.93, l'ajustement est médiocre. Quelques *outliers* contribuent fortement au modèle. Ils ont un très fort 'bras de levier' (*leverage*) comme le montre le graphique du bas.
+
+#### Elimination des observations trop influentes
+
+Pour évaluer l'influence de chacun des individus sur l'équation de la régression, on peut utiliser la [distance de Cook](https://fr.wikipedia.org/wiki/Distance_de_Cook). Une cote mal taillée consiste à considérer que si la distance de Cook d'une observation excède 4/N, avec N le nombre d'observations, il est préférable d'éliminer cette observation.
+
+Ces distances sont obtenues en appliquant au modèle la fonction `cooks.distance()` du package `{stats}`. 
+
+```{r}
+dist_cook <- cooks.distance(mod)
+seuil_cook <- 4 / nrow(esp_lt_data)
+
+esp_lt_data <- esp_lt_data %>% 
+  cbind(dist_cook) %>% # ajout de la colonne avec les distances
+  filter(dist_cook < seuil_cook) # suppression des observations avec distance > 4/N
+```
+
+#### Modèle final
+
+On peut maintenant recommencer et déterminer la relation taille - poids sur les observations retenues.
+
+```{r}
+mod <- lm(log(mei_poids) ~ log(mei_taille),
+          data = esp_lt_data)
+
+summary(mod)
+
+plot(mod)
+```
+
+```{r, echo = FALSE}
+alpha <- mod$coefficients["(Intercept)"]
+beta <- mod$coefficients["log(mei_taille)"]
+```
+
+Les coefficients du modèle sont :
+
+```{r}
+mod$coefficients
+```
+
+
+Au final, l'équation retenue est :
+
+log(poids) = log(`r alpha`) + `r beta` x log(longueur), soit, en conservant pas mal de décimales :
+
+Poids(g) = `r exp(alpha) %>% format(scientific = FALSE)` x Longueur(cm)^`r beta`^
+
+Graphiquement, on peut représenter la relation avec des axes arithmétiques ou bien log-transformés. Les courbes en rouge indiquent les valeurs prédites par le modèle. Elles sont contenues dans le modèle et on y accède par `mod$fitted.values`. Comme le modèle prédit $\log(Poids)$, pour obtenir le poids prédit on applique une exponentielle avec la fonction `exp()`.
+
+```{r, fig.width = 9, class.source = 'fold-hide'}
+esp_lt_data <- esp_lt_data %>% 
+  cbind(predicted = exp(mod$fitted.values)) %>% # ajout des valeurs prédites
+  arrange(mei_taille) # mise en ordre de taille (pour le geom_line())
+
+# graphique en axes arithmétiques
+gg1 <- ggplot(data = esp_lt_data,
+              aes(x = mei_taille,
+                  y = mei_poids)) +
+  geom_point(size = 0.2) +
+  geom_line(aes(y = predicted),
+            col = "red",
+            size = 1) +
+  labs(x = "Longueur (mm)",
+       y = "Masse (g)",
+       title = mon_espece)
+
+# graphique en axes log-log
+gg2 <- gg1 +
+  scale_x_log10() +
+  scale_y_log10()
+
+# assemblage des graphiques
+ggpubr::ggarrange(gg1,
+                  gg2,
+                  nrow = 1)
+```
+
+
+## Application
+
+La section ci-dessus a détaillé pas à pas la procédure de détermination de la relation taille - poids pour une espèce. Il s'agit maintenant d'aller droit au but pour obtenir le résultat pour plusieurs espèces si l'on se satisfait des options par défaut et qu'aucune difficulté ne vient perturber les calculs.
+
+Conversion des longueurs en *cm* :
+
+```{r}
+tp_data <- tp_data %>% 
+  mutate(mei_taille = mei_taille / 10)
+```
+
+Séparation du jeu de données selon le type de longueur mesurée :
+
+```{r}
+tp_data_lt <- tp_data %>% 
+  filter(tlo_libelle == "Totale")
+
+tp_data_lf <- tp_data %>% 
+  filter(tlo_libelle == "Fourche")
+```
+
+### Pour les longueurs totales
+
+
+```{r}
+resume <- qtp_resume_donnees(df = tp_data_lt,
+                             seuil_poids_absolu = 5)
+```
+
+
+```{r, class.source = 'fold-hide'}
+resume %>% 
+  mutate_if(is.numeric, round, 1) %>% 
+  DT::datatable(rownames = FALSE)
+```
+
+Les espèces pour lesquelles seuls quelques individus passent le seuil du poids minimum ne peuvent faire l'objet d'une analyse fiable. Sélectionnons par exemple les espèces avec au minimum 20 individus dépassant le seuil.
+
+```{r}
+mes_especes <- resume %>% 
+  filter(n_sup_seuil > 19) %>% 
+  pull(esp_code_alternatif) %>% 
+  as.character()
+
+mes_especes
+```
+
+Au total, `r length(mes_especes)` espèces comptent suffisamment d'individus pesés et mesurés en longueur totale.
+
+Sur ces espèces, on peut appliquer la fonction `qtp_calcul()`. Pour en savoir plus sur cette fonction, exécuter dans la console `?qtp_calcul`. Ici elle est employée avec ses options par défaut, ce qui implique que les individus pesant moins de 5g sont écartés ainsi que ceux présentant des valeurs extrêmes de taille ou de poids.
+
+```{r}
+tp_lt <- aspeQual::qtp_calcul2(df = tp_data_lt,
+                     var_longueur = mei_taille,
+                     var_poids = mei_poids,
+                     var_taxon = esp_code_alternatif) %>% 
+   filter(!is.na(a))
+```
+
+```{r, class.source = 'fold-hide'}
+tp_lt %>% 
+  DT::datatable(rownames = FALSE,
+                options = list(columnDefs = list(list(className = 'dt-center',
+                                                      targets = 0:3)))) %>% 
+  DT::formatRound(columns = c('a', 'b'), digits = 4) %>% 
+  DT::formatRound(columns = c('r2_ajuste'), digits = 2) %>% 
+  DT::formatRound(columns = c('taille_mini', 'taille_maxi', 'poids_mini'), digits = 1) %>% 
+  DT::formatCurrency(columns = c('n_ind', 'poids_maxi'), currency = "",
+                     interval = 3, mark = " ", digits = 0)
+```
+
+Certaine des $r^2$ ajustés ne font pas rêver. On va considérer que s'il est inférieur à 0.8, la relation n'est pas utilisable.
+
+```{r}
+tp_lt <- tp_lt %>% 
+  filter(r2_ajuste > 0.8) %>% 
+  mutate(tlo_libelle = "Totale")
+```
+
+### Pour les longueurs fourche
+
+On répète les opérations détaillées pour les longueurs totales.
+
+```{r}
+resume <- qtp_resume_donnees(df = tp_data_lf,
+                             seuil_poids_absolu = 5)
+```
+
+Espèces avec au minimum 20 individus dépassant le seuil de 5g :
+
+```{r}
+mes_especes <- resume %>% 
+  filter(n_sup_seuil > 19) %>% 
+  pull(esp_code_alternatif) %>% 
+  as.character()
+
+mes_especes
+```
+
+`r length(mes_especes)` espèces comptent suffisamment d'individus pesés et mesurés en longueur fourche.
+
+Application de la fonction `qtp_calcul()` aux espèces sélectionnées.
+
+```{r}
+tp_lf <- aspeQual::qtp_calcul2(df = tp_data_lf,
+                               var_longueur = mei_taille,
+                               var_poids = mei_poids,
+                               var_taxon = esp_code_alternatif) %>% 
+  filter(!is.na(a), r2_ajuste > 0.8) %>% # Suppression des r2 ajustés inférieurs à 0.8
+  mutate(tlo_libelle = "Fourche")
+```
+
+
+### Assemblage des deux tables
+
+```{r}
+tp_aspe <- rbind(tp_lf, tp_lt)
+rownames(tp_aspe) <- NULL
+```
+
+```{r, class.source = 'fold-hide'}
+tp_aspe %>% 
+  DT::datatable(rownames = FALSE,
+                options = list(columnDefs = list(list(className = 'dt-center',
+                                                      targets = 0:3)))) %>% 
+  DT::formatRound(columns = c('a', 'b'), digits = 4) %>% 
+  DT::formatRound(columns = c('r2_ajuste'), digits = 2) %>%
+  DT::formatRound(columns = c('taille_mini', 'taille_maxi', 'poids_mini'), digits = 1) %>%
+  DT::formatCurrency(columns = c('n_ind', 'poids_maxi'), currency = "",
+                   interval = 3, mark = " ", digits = 0)
+```
+
+```{r, class.source = 'fold-hide'}
+tp_aspe %>% 
+  downloadthis::download_this(
+    output_name = "taille_poids",
+    output_extension = ".csv",
+    button_label = "Télécharger le tableau en csv",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+```
+
+
+
+
+
+# Mise en perspective / Fishbase
+
+<div align="center">
+
+![](../assets/logo_fishbase.png)
+
+</div>
+
+Le package {rfishbase} ([Boettiger, Lang & Wainwright 2012](https://fishlab.ucdavis.edu/wp-content/uploads/sites/397/2011/01/BoettigerFishbase2012.pdf)) est une interface pour utiliser avec R les données compilées dans Fishbase sur plusieurs milliers d'espèces.
+
+Il a été  et a largement enrichi depuis 2012 pour suivre les évolutions de Fishbase et est accompagné d'un [tutoriel](https://docs.ropensci.org/rfishbase). 
+
+On peut donc comparer nos résultats avec des données de [Fishbase](www.fishbase.se). 
+
+## Installation du package `{rfishbase}`
+
+Il faut d'abord charger le package {rfishbase} pour accéder à sa fonction `length_weight()`. 
+
+```{r, eval = FALSE}
+install.packages("rfishbase")
+```
+
+## Exemple sur une espèce
+
+### Téléchargement des données Fishbase
+
+Exemple avec la tanche, *Tinca tinca* (la fonction permettrait de charger les relations pour plusieurs espèces à la fois).
+
+Une fois les données téléchargées, les colonnes sont renommées et les modalités de la longueur sont recodées en *Totale* ou *Fourche* pour garder la cohérence avec *Aspe*. Les autres modalités n'étant pas présentes dans *Aspe*, elles sont écartées (ex : longueur standard).
+
+```{r}
+nom_latin <- "Tinca tinca" # choix de l'espèce
+
+esp_fb_data <- rfishbase::length_weight(nom_latin) %>% # téléchargement
+  select(tlo_libelle = Type, # sélection et renommage
+         a,
+         b,
+         r2_ajuste = CoeffDetermination,
+         n_ind = Number,
+         taille_mini = LengthMin,
+         taille_maxi = LengthMax,
+         lieu = Locality) %>% 
+    mutate(tlo_libelle = case_when(tlo_libelle == "TL" | is.na(tlo_libelle) ~ "Totale", # recodage
+                                   tlo_libelle == "FL" ~ "Fourche")) %>% 
+    filter(tlo_libelle %in% c("Totale", "Fourche")) # filtrage
+```
+
+Création d'un objet `lieu` pour localiser notre étude.
+
+```{r}
+lieu <- data.frame(lieu = "France - ASPE") 
+```
+
+Pour assembler nos résultats et ceux de Fishbase, on empile les tableaux. La présente étude figure sur la première ligne.
+
+```{r}
+esp_synthese <- tp_aspe %>% 
+  filter(esp_code_alternatif == "TAN") %>% # seulement la tanche
+  cbind(lieu) %>% # ajout du lieu comme une colonne
+  select(names(esp_fb_data)) %>% # agencement des colonnes dans le même ordre que celles de fb_data
+  rbind(esp_fb_data) # empilement
+```
+
+Comme les intitulés des lieux d'étude sont assez moches (parfois les années, les coordonnées etc.) on peut les nettoyer un peu en utilisant la fonction `qtp_nettoyer_fb_lieu()` qui va supprimer dans la variable `lieu` les chiffres, les contenus entre parenthèses, les coordonnées ainsi que divers caractères spéciaux.
+
+```{r}
+esp_synthese <- esp_synthese %>% 
+  qtp_nettoyer_fb_lieu()
+```
+
+Tableau mise en forme pour la tanche :
+
+```{r, class.source = 'fold-hide'}
+esp_synthese %>% 
+    DT::datatable(rownames = FALSE) %>% 
+    DT::formatRound(columns = c('a', 'b'), digits = 4) %>% 
+    DT::formatRound(columns = c('r2_ajuste'), digits = 2) %>% 
+    DT::formatRound(columns = c('taille_mini', 'taille_maxi'), digits = 1) %>% 
+    DT::formatCurrency(columns = c('n_ind'), currency = "",
+                       interval = 3, mark = " ", digits = 0)
+  
+```
+
+
+## Mise en perspective graphique
+
+On peut reproduire le type de graphique que propose Fishbase pour situer les relations taille - poids les unes par rapport aux autres.
+
+```{r, class.source = 'fold-hide'}
+g <- ggplot(data = esp_synthese,
+            aes(x = b,
+                y = log(a, base = 10),
+                text = lieu)) +
+  geom_point() +
+  geom_point(data = esp_synthese[1,],
+             color = "red",
+             size = 2) +
+  geom_text(data = esp_synthese[1,],
+            color = "red",
+            label = "France - Aspe",
+            nudge_y = 0.07) +
+  labs(y = "log10(a)",
+       title = nom_latin)
+
+plotly::ggplotly(g, tooltip = "text")
+```
+
+Il est rassurant que notre point ne tombe pas totalement en dehors du nuage de points. Le point en bas à gauche est pour le moins douteux.
+
+# Synthèse
+
+Il s'agit ici de compléter les relations obtenues à partir de Aspe par celles de Fishbase pour obtenir les équations de conversions pour **toutes** les espèces de poissons de la base Aspe. Le tableau ainsi obtenu permettra donc d'évaluer les poids de tous les individus ou lots qui n'ont pas été pesés.
+
+Comme la requête depuis Fishbase requiert les noms scientifiques des espèces au format *genre espèce* en deux mots, on prépare la liste des noms à partir du *dataframe* `resume` en supprimant ce qui est entre parenthèses et au-delà du deuxième mot. Par exemple *Salmo trutta fario* devient *Salmo trutta*.
+
+Quand la détermination a été approximée au genre, c'est qu'il y a hésitation entre plusieurs espèces morphologiquement très proches. Pour la plupart des usages classiques il n'est pas génant de prendre la relation taille - poids d'une des espèces possible. Ainsi, on recode les *Carassius* déterminés seulement au genre en *Carassius carassius*. On procède de même pour les (rares) taxons pour lesquels aucune donnée taille-poids n'est publiée sur Fishbase (ex : *Gobio occitaniae*, *Pungitius pungitius*) en longueur fourche ou totale.
+
+```{r}
+especes <- tp_data %>%
+  select(esp_code_alternatif) %>% 
+  mef_ajouter_esp() %>% 
+  select(esp_code_alternatif, esp_nom_latin) %>% 
+  distinct() %>%
+  mutate(esp_nom_latin = str_replace(esp_nom_latin, # suppression du contenu entre parenthèses
+                                     pattern = " \\s*\\([^\\)]+\\)",
+                                     replacement = ""),
+         esp_nom_latin_n_mots = str_count(esp_nom_latin, "\\S+"), # calcul du nb de mots
+         esp_nom_latin = ifelse(esp_nom_latin_n_mots == 1, # suppression des mots au-delà du 2e
+                                yes = word(esp_nom_latin, 1, 1, sep = " "),
+                                no =  word(esp_nom_latin, 1, 2, sep = " ")),
+         esp_nom_latin = case_when(
+           esp_nom_latin == "Blicca" ~ "Blicca bjoerkna", # détermination au genre
+           esp_nom_latin == "Abramis" ~ "Abramis brama",
+           esp_nom_latin == "Barbus" ~ "Barbus barbus",
+           esp_nom_latin == "Carassius" ~ "Carassius carassius",
+           esp_nom_latin == "Coregonus" ~ "Coregonus lavaretus",
+           esp_nom_latin == "Cyprinidae" ~ "Rutilus rutilus",
+           esp_nom_latin == "Gobio" ~ "Gobio gobio",
+           esp_nom_latin == "Lampetra" ~ "Lampetra fluviatilis",
+           esp_nom_latin == "Micropterus" ~ "Micropterus salmoides",
+           esp_nom_latin == "Phoxinus" ~ "Phoxinus phoxinus",
+           esp_nom_latin == "Liza aurata" ~ "Chelon auratus", # espèce renommée
+           esp_nom_latin == "Gobio occitaniae" ~ "Gobio gobio", # recodage par espèce proche
+           esp_nom_latin == "Cobitis bilineata" ~ "Cobitis taenia", # idem
+           esp_nom_latin == "Proterorhinus semilunaris" ~ "Proterorhinus marmoratus", # idem
+           esp_nom_latin == "Pungitius pungitius" ~ "Gasterosteus aculeatus", # idem
+           TRUE ~ esp_nom_latin),
+         esp_nom_latin = str_squish(esp_nom_latin)) %>% # suppression des espaces qui trainent
+  select(-esp_nom_latin_n_mots)
+  
+```
+
+Ensuite on collecte les paramètres depuis Fishbase. Les données taguées douteuses sont supprimées, sauf pour *Telestes souffia* car il n'y a qu'une donnée sur Fishbase. Faute de mieux on la conserve.
+
+```{r}
+tp_fb <- especes %>% 
+  pull(esp_nom_latin) %>% 
+  unique() %>% 
+  rfishbase::length_weight() %>% 
+  filter(is.na(EsQ) | Species == "Telestes souffia") %>% # suppression données taguées douteuses
+  select(esp_nom_latin = Species,
+         tlo_libelle = Type,
+         a,
+         b,
+         r2_ajuste = CoeffDetermination,
+         n_ind = Number,
+         taille_mini = LengthMin,
+         taille_maxi = LengthMax,
+         lieu = Locality) %>%
+    mutate(tlo_libelle = case_when(tlo_libelle == "TL" | is.na(tlo_libelle) ~ "Totale",
+                                   tlo_libelle == "FL" ~ "Fourche")) %>% 
+    filter(tlo_libelle %in% c("Totale", "Fourche")) %>% # on ne garde que les longueurs fourche ou totale
+  qtp_nettoyer_fb_lieu() # nettoyage du champ "lieu"
+```
+
+A partir de ce tableau, on agrège par espèce et type de longueur.
+
+>NB La relation taille - poids étant de type puissance, on retient pour les paramètres $a$ et $b$ "moyens" respectivement les moyennes géométrique et arithmétique (méthode retenue par Fishbase). 
+
+```{r}
+tp_fb <- tp_fb %>% 
+  group_by(esp_nom_latin, tlo_libelle) %>% 
+    summarise(a = exp(mean(log(a))), # moyenne géométrique
+              b = mean(b), # moyenne arithmétique
+              n_etudes = n(), # nb d'études
+              source = "Fishbase") %>% 
+  left_join(y = especes) %>% 
+  select(esp_code_alternatif,
+         esp_nom_latin,
+         tlo_libelle,
+         a,
+         b,
+         source,
+         n_etudes) %>% 
+  filter(!is.na(a))
+```
+
+Mise en forme du tableau `tp_aspe` pour qu'il puisse être superposé avec `tp_fb` (colonnes dans le même ordre).
+
+```{r}
+tp_aspe <- tp_aspe %>% 
+  mutate(source = "ASPE",
+         n_etudes = 1) %>% 
+  left_join(y = ref_espece %>%
+              select(esp_code_alternatif, esp_nom_latin)) %>% 
+  select(names(tp_fb))
+```
+
+Les deux tableaux sont superposés.
+
+```{r}
+tp <- rbind(tp_fb, tp_aspe) %>% 
+  arrange(esp_code_alternatif, tlo_libelle)
+```
+
+
+```{r, echo = FALSE}
+tp %>%
+  DT::datatable(rownames = FALSE) %>% 
+  DT::formatRound(columns = c('a', 'b'), digits = 5)
+```
+
+```{r, echo = FALSE}
+tp %>% 
+  downloadthis::download_this(
+    output_name = "tp",
+    output_extension = ".csv",
+    button_label = "Télécharger le tableau en csv",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+```
+
+
+Pour contrôler si le tableau `tp` contient au moins une relation taille-poids pour chacune des espèces de poisson de la base Aspe, on peut chercher les `esp_code_alternatif` présents dans `tp_data` mais qui seraient absents de `tp`. 
+
+```{r, echo = FALSE}
+esp_sans_tp <- setdiff(unique(tp_data$esp_code_alternatif),
+                       unique(tp$esp_code_alternatif))
+
+ref_espece %>% 
+  filter(esp_code_alternatif %in% esp_sans_tp) %>% 
+  select(esp_code_alternatif, esp_nom_commun, esp_nom_latin) %>% 
+  DT::datatable(rownames = FALSE)
+```
+
+A ce stade, on dispose donc d'un tableau contenant *a minima* une relation de conversion taille - poids pour chacune des espèces de poissons (plus pour quelques crustacés) recensées dans la base Aspe. Pour certaines espèces comme *Barbus meridionalis* on dispose de 4 relations, soit deux issues de Fishbase (Lt et Lf) et deux issues de Aspe.
+
+# Exportation / sauvegarde
+
+```{r, echo = FALSE}
+save(tp, file = "../../data/tp.RData")
+```
+
+```{r, eval = FALSE}
+save(tp, file = "../data/tp.RData")
+```
+

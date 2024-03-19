@@ -5,7 +5,14 @@
 \title{Tester l'équivalence des distributions entre individus mesurés et dégroupées. Peut servir à
     comparer deux méthodes de dégroupage.}
 \usage{
-qta_tests_distrib_sl(df, lots = NA, var_taille1, var_taille2 = NA, sig = TRUE)
+qta_tests_distrib_sl(
+  df,
+  lots = NA,
+  var_taille1,
+  var_taille2 = NA,
+  var_taille3 = NA,
+  sig = TRUE
+)
 }
 \arguments{
 \item{df}{Dataframe de données avec une variable "lop_id" et le nom de la (des) variable(s)
@@ -15,7 +22,10 @@ choisie(s) à représenter.}
 
 \item{var_taille1}{Caractère. Nom de la variable à représenter, entre guillemets.}
 
-\item{var_taille2}{Caractère. Nom de la variable à représenter, entre guillemets (si deux méthodes
+\item{var_taille2}{Caractère. Nom de variable à représenter, entre guillemets (si deux méthodes
+de dégroupage à comparer).}
+
+\item{var_taille3}{Caractère. Nom de variable à représenter, entre guillemets (si trois méthodes
 de dégroupage à comparer).}
 
 \item{sig}{Booléen. Si sig = TRUE (défaut), le tableau contient les niveaux de significativité
@@ -30,6 +40,6 @@ Les tests sont Kolmogorov-Smirnov (comparaison des distributions), Student (comp
 }
 \examples{
 \dontrun{
-tests <- qta_tests_distrib_sl(df = df, lot = 3156360, variable = "mei_taille")
+tests <- qta_tests_distrib_sl(df = df, lots = 3156360, var_taille1 = "mei_taille")
 }
 }
