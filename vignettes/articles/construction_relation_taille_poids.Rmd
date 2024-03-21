@@ -777,7 +777,7 @@ A ce stade, on dispose donc d'un tableau contenant *a minima* une relation de co
 # Exportation / sauvegarde
 
 ```{r, echo = FALSE}
-save(tp, file = "../../data/tp.RData")
+# save(tp, file = "../../data/tp.RData")
 ```
 
 ```{r, eval = FALSE}
