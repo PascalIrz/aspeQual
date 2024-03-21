@@ -529,7 +529,7 @@ tp_aspe %>%
 
 <div align="center">
 
-![](../assets/logo_fishbase.png)
+![](../logo_fishbase.png)
 
 </div>
 
