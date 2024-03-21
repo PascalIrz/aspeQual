@@ -73,10 +73,10 @@ Il faut aussi que les distributions des deux variables soient "raisonnablement" 
 ```{r}
 ## Dépendances 
 
-pkg_gh <- c("PascalIrz/aspe")
+# pkg_gh <- c("PascalIrz/aspe")
 # pkg_cran <- c("tidyverse", "purrr", "sf", "mapview", "leaflet", "leaflet.extras", "ggrepel", "glue", "forcats", "scales", "data.table", "lubridate", "stringr", "tidyr", "ggplot2", "knitr", "rmarkdown", "htmltools", "leafem", "png", "webp")
 
-try(pak::pkg_install(pkg_gh))
+# try(pak::pkg_install(pkg_gh))
 
 # sapply(
 #   X = pkg_cran,
@@ -90,7 +90,8 @@ try(pak::pkg_install(pkg_gh))
 ```{r, eval = FALSE}
 library(aspe)
 library(aspeQual)
-library(tidyverse)
+library(dplyr)
+library(tidyr)
 
 load(file = "raw_data/tables_sauf_mei_2021_10_21_11_44_01.RData")
 load(file = "raw_data/mei_2021_10_21_11_44_01.RData")
@@ -99,9 +100,10 @@ load(file = "raw_data/mei_2021_10_21_11_44_01.RData")
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
 library(aspe)
 library(aspeQual)
-library(tidyverse)
+library(dplyr)
+library(tidyr)
 
-rdata_tables <- misc_nom_dernier_fichier(repertoire = "../../../../raw_data/rdata",
+rdata_tables <- aspe::misc_nom_dernier_fichier(repertoire = "../../../../raw_data/rdata",
                                          pattern = "^tables")
 
 rdata_mei <- misc_nom_dernier_fichier(repertoire = "../../../../raw_data/rdata",

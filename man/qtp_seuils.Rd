@@ -4,20 +4,20 @@
 \alias{qtp_seuils}
 \title{Calculer les seuils}
 \usage{
-qtp_seuils(df, code_espece, variable = "mei_taille", seuil_densite = 0.01)
+qtp_seuils(df, var_taxon, var_a_tester = mei_taille, seuil_densite = 0.01)
 }
 \arguments{
 \item{df}{Dataframe contenant les données.}
 
-\item{code_espece}{Texte. Code espèce en trois lettres.}
+\item{var_taxon}{Variable contenant les identifiants des taxons (codes espèces, noms scientifiques ...).}
 
-\item{variable}{Texte. Variable, au choix "mei_taille" ou "mei_poids".}
+\item{var_a_tester}{Variable dont la distribution est examinée, par exemple mei_taille ou mei_poids.}
 
-\item{seuil_densite}{Numérique. Seuil de densité de probabilité probabilité au sens
+\item{seuil_densite}{Numérique. Seuil de densité de probabilité au sens
 de ggplot2::geom_density(). Par défaut il est de 1\%.}
 }
 \value{
-Un vecteur contenant les seuils haut et bas, c'est-à-dire les tailles ou
+Un dataframe contenant les seuils haut et bas, c'est-à-dire les tailles ou
     poids mini et maxi à retenir au seuil choisi.
 }
 \description{
@@ -26,7 +26,8 @@ Calculer les seuils
 \examples{
 \dontrun{
 qtp_seuils (df = tp_data,
-code_espece = "ROT",
-variable = "mei_taille")
+            var_taxon = esp_code_alternatif,
+            var_a_tester = mei_taille,
+            seuil_densite = 0.001)
 }
 }
